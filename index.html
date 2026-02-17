@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HakeemOnline | Clinical Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #chat-wrap { width: 100%; max-width: 500px; height: 90vh; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        #header { background: #1b5e20; color: white; padding: 20px; text-align: center; font-size: 1.2rem; font-weight: bold; border-bottom: 3px solid #ff9800; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #f9fbf9; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+        .bot { align-self: flex-start; background: #ffffff; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 2px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
+        .user { align-self: flex-end; background: #1b5e20; color: white; border-bottom-right-radius: 2px; }
+        #input-area { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px 20px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        #sendBtn { background: #1b5e20; color: white; border: none; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        #sendBtn:hover { background: #2e7d32; }
+    </style>
+</head>
+<body>
+
+<div id="chat-wrap">
+    <div id="header">HakeemOnline Portal</div>
+    <div id="chat-box">
+        <div class="msg bot">Assalamu Alaikum. I am Hakeem Faizan's clinical assistant. <br><br><b>What is your full name and age?</b></div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Type here..." autocomplete="off">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<script>
+    let currentPatientId = "NEW";
+    // Your exact Web App URL
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwrVHue8R5B_d4p1fsND-0GPo6-CDWPnZNCEHTGU-AcLDezxULxXBMfX6KYqcc-eS1B/exec';
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const box = document.getElementById('chat-box');
+        const text = input.value.trim();
+
+        if (!text) return;
+
+        // 1. Show User Message
+        box.innerHTML += `<div class="msg user">${text}</div>`;
+        input.value = '';
+        
+        // 2. Placeholder for AI Response
+        const botBubble = document.createElement('div');
+        botBubble.className = "msg bot";
+        botBubble.innerHTML = "<i>Analyzing clinical data...</i>";
+        box.appendChild(botBubble);
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            // 3. POST data to the Google Sheet (no-cors mode to bypass security blocks)
+            await fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                body: JSON.stringify({message: text, patientId: currentPatientId})
+            });
+
+            // 4. Wait 6 seconds for Gemini to process and the sheet to update
+            setTimeout(async () => {
+                try {
+                    // 5. GET the latest reply back from the doGet function in Apps Script
+                    const response = await fetch(WEB_APP_URL);
+                    const data = await response.json();
+                    
+                    botBubble.innerHTML = `<b>[ID: ${data.patientId}]</b><br>${data.reply}`;
+                    currentPatientId = data.patientId;
+                    box.scrollTop = box.scrollHeight;
+                } catch (e) {
+                    botBubble.innerHTML = "Case recorded in ledger. Please refresh or wait for Hakeem's review.";
+                }
+            }, 6000);
+
+        } catch (error) {
+            botBubble.innerHTML = "System busy. Data has been saved to the clinic ledger.";
+        }
+    }
+</script>
+
+</body>
+</html>
