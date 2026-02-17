@@ -15,7 +15,6 @@
         #input-area { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
         input { flex: 1; padding: 12px 20px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
         #sendBtn { background: #1b5e20; color: white; border: none; padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        #sendBtn:hover { background: #2e7d32; }
     </style>
 </head>
 <body>
@@ -33,7 +32,6 @@
 
 <script>
     let currentPatientId = "NEW";
-    // Using your exact Web App URL
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwrVHue8R5B_d4p1fsND-0GPo6-CDWPnZNCEHTGU-AcLDezxULxXBMfX6KYqcc-eS1B/exec';
 
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
@@ -45,26 +43,22 @@
         const text = input.value.trim();
         if (!text) return;
 
-        // 1. Show User Message
         box.innerHTML += `<div class="msg user">${text}</div>`;
         input.value = '';
         
-        // 2. Placeholder for AI Response
         const botBubble = document.createElement('div');
         botBubble.className = "msg bot";
-        botBubble.innerHTML = "<i>Hakeem's assistant is analyzing symptoms...</i>";
+        botBubble.innerHTML = "<i>Assistant is analyzing symptoms...</i>";
         box.appendChild(botBubble);
         box.scrollTop = box.scrollHeight;
 
         try {
-            // 3. Send data to Google
             await fetch(WEB_APP_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
                 body: JSON.stringify({message: text, patientId: currentPatientId}) 
             });
 
-            // 4. Persistent Polling (Checks every 3 seconds)
             let attempts = 0;
             const checkReply = setInterval(async () => {
                 attempts++;
@@ -72,25 +66,22 @@
                     const response = await fetch(WEB_APP_URL);
                     const data = await response.json();
                     
-                    // If we get a real reply and it's not the initial welcome message
                     if (data.reply && !data.reply.includes("full name and age")) {
                         botBubble.innerHTML = `<b>[ID: ${data.patientId}]</b><br>${data.reply}`;
                         currentPatientId = data.patientId;
                         box.scrollTop = box.scrollHeight;
-                        clearInterval(checkReply); // STOP waiting once we have the answer
+                        clearInterval(checkReply);
                     }
-                } catch (e) { 
-                    console.log("Waiting for AI reply..."); 
-                }
+                } catch (e) { console.log("Checking for reply..."); }
 
-                if (attempts > 12) { // Stop trying after ~36 seconds
+                if (attempts > 15) { 
                     clearInterval(checkReply);
-                    botBubble.innerHTML = "Analysis saved to ledger. Please wait for Hakeem's review or check back in a moment.";
+                    botBubble.innerHTML = "Case recorded. Please wait for Hakeem's review.";
                 }
             }, 3000);
 
         } catch (error) {
-            botBubble.innerHTML = "Connection Error. Please try again.";
+            botBubble.innerHTML = "Connection error. Please try again.";
         }
     }
 </script>
